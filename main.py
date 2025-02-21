@@ -95,10 +95,10 @@ def check_condition():
             
             # 检查日线多头排列条件
             day_condition = (day_ma['5'] > day_ma['10'] and
-                           day_ma['10'] > day_ma['20'] and
-                           day_ma['20'] > day_ma['40'] and
-                           day_ma['40'] > day_ma['60'] and
-                           day_ma['60'] > day_ma['120'])
+                            day_ma['10'] > day_ma['20'] and
+                            day_ma['20'] > day_ma['40'] and
+                            day_ma['40'] > day_ma['60'] and
+                            day_ma['60'] > day_ma['120'])
             
             # 检查周线多头排列条件
             week_condition = (week_ma['5'] > week_ma['10'] and
