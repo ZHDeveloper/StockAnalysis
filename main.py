@@ -2,6 +2,7 @@ import datetime
 import time
 import os
 import efinance as ef
+import argparse
 from strategies.double_ma_strategy import DoubleMaStrategy
 from strategies.ma_strategy import MAStrategy
 from utils.logger import Logger
@@ -79,4 +80,11 @@ def check_ma_strategy():
         logger.info(f"当日无符合条件股票({current_date})")
 
 if __name__ == '__main__':
-    check_double_ma_strategy()
+    parser = argparse.ArgumentParser(description='股票分析工具')
+    parser.add_argument('--strategy', choices=['ma', 'double_ma'], default='double_ma', help='选择策略：ma(均线金叉) 或 double_ma(双均线多头排列)')
+    args = parser.parse_args()
+    
+    if args.strategy == 'ma':
+        check_ma_strategy()
+    else:
+        check_double_ma_strategy()

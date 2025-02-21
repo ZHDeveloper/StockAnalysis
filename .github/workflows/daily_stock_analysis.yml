@@ -8,6 +8,9 @@ on:
 jobs:
   analyze:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        strategy: [double_ma, ma]
     
     steps:
     - uses: actions/checkout@v3
@@ -23,7 +26,7 @@ jobs:
         pip install -r requirements.txt
     
     - name: Run analysis
-      run: python main.py
+      run: python main.py --strategy ${{ matrix.strategy }}
     
     - name: Get current date
       id: date
@@ -47,15 +50,16 @@ jobs:
         echo "stocks=$(ls -1 stocks/)" >> $GITHUB_OUTPUT
     
     outputs:
-      create_release: ${{ steps.create_release.outputs }}
-      files: ${{ steps.files.outputs }}
+      release_url: ${{ steps.create_release.outputs.upload_url }}
+      logs: ${{ steps.files.outputs.logs }}
+      stocks: ${{ steps.files.outputs.stocks }}
 
   upload-logs:
     needs: analyze
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        file: ${{ fromJson(needs.analyze.outputs.files.logs) }}
+        file: ${{ fromJson(needs.analyze.outputs.logs) }}
     
     steps:
     - uses: actions/checkout@v3
@@ -64,7 +68,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ fromJson(needs.analyze.outputs.create_release).upload_url }}
+        upload_url: ${{ needs.analyze.outputs.release_url }}
         asset_path: ./logs/${{ matrix.file }}
         asset_name: ${{ matrix.file }}
         asset_content_type: text/plain
@@ -74,7 +78,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        file: ${{ fromJson(needs.analyze.outputs.files.stocks) }}
+        file: ${{ fromJson(needs.analyze.outputs.stocks) }}
     
     steps:
     - uses: actions/checkout@v3
@@ -83,7 +87,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ fromJson(needs.analyze.outputs.create_release).upload_url }}
+        upload_url: ${{ needs.analyze.outputs.release_url }}
         asset_path: ./stocks/${{ matrix.file }}
         asset_name: ${{ matrix.file }}
         asset_content_type: text/plain
