@@ -40,22 +40,34 @@ jobs:
         draft: false
         prerelease: false
     
-    - name: Upload Log to Release
+    - name: Get file lists
+      id: files
+      run: |
+        echo "logs=$(ls -1 logs/)" >> $GITHUB_OUTPUT
+        echo "stocks=$(ls -1 stocks/)" >> $GITHUB_OUTPUT
+    
+    - name: Upload Log Files
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./logs/stock_analysis_${{ steps.date.outputs.date }}.log
-        asset_name: stock_analysis_${{ steps.date.outputs.date }}.log
+        asset_path: ./logs/${{ matrix.file }}
+        asset_name: ${{ matrix.file }}
         asset_content_type: text/plain
-
-    - name: Upload Selected Stocks to Release
+      strategy:
+        matrix:
+          file: ${{ steps.files.outputs.logs }}
+    
+    - name: Upload Stock Files
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./stocks/stocks_${{ steps.date.outputs.date }}.txt
-        asset_name: stocks_${{ steps.date.outputs.date }}.txt
+        asset_path: ./stocks/${{ matrix.file }}
+        asset_name: ${{ matrix.file }}
         asset_content_type: text/plain
+      strategy:
+        matrix:
+          file: ${{ steps.files.outputs.stocks }}
