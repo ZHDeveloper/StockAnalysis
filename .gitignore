@@ -1,0 +1,7 @@
+# Created by venv; see https://docs.python.org/3/library/venv.html
+
+# 忽略logs目录下的所有文件
+logs/
+
+# 忽略path目录及其内容
+path/
