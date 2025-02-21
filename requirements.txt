@@ -1,2 +1,3 @@
 baostock>=0.7.5
 pandas>=1.3.0
+efinance>=1.3.3

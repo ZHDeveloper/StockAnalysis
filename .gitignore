@@ -8,3 +8,8 @@ path/
 
 # 忽略stocks目录下的所有文件
 stocks/
+
+# 忽略Python编译缓存文件
+__pycache__/
+*.py[cod]
+*$py.class

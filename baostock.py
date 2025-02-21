@@ -1,4 +1,4 @@
-import efinance as ef
+import baostock as bs
 import pandas as pd
 import datetime
 import time
@@ -33,9 +33,15 @@ def setup_logger():
 def check_condition():
     setup_logger()
     logging.info("开始执行选股程序...")
+    # 登录系统
+    bs.login()
+    logging.info("系统登录成功")
     
     # 获取股票池
-    stocks = ef.stock.get_realtime_quotes()
+    rs = bs.query_all_stock(day=datetime.datetime.now().strftime('%Y-%m-%d'))
+    stocks = []
+    while (rs.error_code == '0') & rs.next():
+        stocks.append(rs.get_row_data())
     logging.info(f"获取股票池完成，共 {len(stocks)} 只股票")
     
     # 存储符合条件的股票
@@ -43,24 +49,26 @@ def check_condition():
     current_date = datetime.datetime.now().strftime('%Y-%m-%d')
     logging.info(f"开始分析每只股票（当前日期：{current_date}）...")
     
-    for index, stock in stocks.iterrows():
+    for index, stock in enumerate(stocks):
         try:
-            stock_code = stock['股票代码']
-            logging.info(f"正在分析第 {index+1}/{len(stocks)} 只股票: {stock_code}")
-            
+            logging.info(f"正在分析第 {index+1}/{len(stocks)} 只股票: {stock[0]}")
             # 获取日线数据
-            day_data = ef.stock.get_quote_history(stock_code, beg='2022-01-01')
-            if day_data is None or day_data.empty:
-                continue
-            
-            # 转换日期格式并设置收盘价
-            day_data['date'] = pd.to_datetime(day_data['日期'])
-            day_data['close'] = day_data['收盘'].astype(float)
+            day_rs = bs.query_history_k_data_plus(stock[0],
+                "date,close",
+                start_date='2022-01-01', 
+                end_date=current_date,
+                frequency="d")
+            day_data = pd.DataFrame(day_rs.data, columns=['date','close'])
+            day_data['close'] = day_data['close'].astype(float)
             
             # 获取周线数据
-            week_data = day_data.set_index('date').resample('W').agg({
-                'close': 'last'
-            }).reset_index()
+            week_rs = bs.query_history_k_data_plus(stock[0],
+                "date,close",
+                start_date='2022-01-01', 
+                end_date=current_date,
+                frequency="w")
+            week_data = pd.DataFrame(week_rs.data, columns=['date','close'])
+            week_data['close'] = week_data['close'].astype(float)
             
             if len(day_data) < 120 or len(week_data) < 120:
                 continue
@@ -101,11 +109,11 @@ def check_condition():
             
             # 同时满足日线和周线条件
             if day_condition and week_condition:
-                selected_stocks.append(stock_code)
-                logging.info(f"发现符合条件的股票：{stock_code}")
+                selected_stocks.append(stock[0])
+                logging.info(f"发现符合条件的股票：{stock[0]}")
                 
         except Exception as e:
-            logging.error(f"处理股票 {stock_code} 时发生错误：{str(e)}")
+            logging.error(f"处理股票 {stock[0]} 时发生错误：{str(e)}")
             continue
             
         time.sleep(0.1)
@@ -132,6 +140,10 @@ def check_condition():
         logging.info(f"筛选结果已保存到文件：{result_file}")
     else:
         logging.info(f"当日无符合条件股票({current_date})")
+    
+    # 登出系统
+    bs.logout()
+    logging.info("系统已登出")
 
 if __name__ == '__main__':
     check_condition()
