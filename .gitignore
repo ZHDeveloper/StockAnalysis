@@ -5,3 +5,6 @@ logs/
 
 # 忽略path目录及其内容
 path/
+
+# 忽略stocks目录下的所有文件
+stocks/

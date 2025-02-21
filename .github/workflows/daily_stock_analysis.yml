@@ -49,3 +49,13 @@ jobs:
         asset_path: ./logs/stock_analysis_${{ steps.date.outputs.date }}.log
         asset_name: stock_analysis_${{ steps.date.outputs.date }}.log
         asset_content_type: text/plain
+
+    - name: Upload Selected Stocks to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./stocks/stocks_${{ steps.date.outputs.date }}.txt
+        asset_name: stocks_${{ steps.date.outputs.date }}.txt
+        asset_content_type: text/plain
