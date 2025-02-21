@@ -27,16 +27,16 @@ pip install -r requirements.txt
 ```
 
 ## 使用方法
-1. 运行双均线多头排列策略
+1. 运行双均线多头排列策略（默认策略）
 ```bash
 python main.py
+# 或者显式指定策略
+python main.py --strategy double_ma
 ```
 
 2. 运行均线金叉策略
-```python
-# 修改main.py中的主函数调用
-if __name__ == '__main__':
-    check_ma_strategy()
+```bash
+python main.py --strategy ma
 ```
 
 ## 输出说明
