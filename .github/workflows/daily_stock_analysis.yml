@@ -45,26 +45,39 @@ jobs:
       run: |
         echo "logs=$(ls -1 logs/)" >> $GITHUB_OUTPUT
         echo "stocks=$(ls -1 stocks/)" >> $GITHUB_OUTPUT
+  
+  upload-logs:
+    needs: analyze
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        file: ${{ needs.analyze.outputs.files.logs }}
     
+    steps:
     - name: Upload Log Files
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        upload_url: ${{ needs.analyze.outputs.create_release.upload_url }}
         asset_path: ./logs/${{ matrix.file }}
         asset_name: ${{ matrix.file }}
         asset_content_type: text/plain
-      strategy:
-        matrix:
-          file: ${{ steps.files.outputs.logs }}
+
+  upload-stocks:
+    needs: analyze
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        file: ${{ needs.analyze.outputs.files.stocks }}
     
+    steps:
     - name: Upload Stock Files
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        upload_url: ${{ needs.analyze.outputs.create_release.upload_url }}
         asset_path: ./stocks/${{ matrix.file }}
         asset_name: ${{ matrix.file }}
         asset_content_type: text/plain
