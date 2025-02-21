@@ -6,6 +6,7 @@ class Logger:
     def __init__(self):
         self.current_date = datetime.datetime.now().strftime('%Y-%m-%d')
         self.log_file = None
+        self.handlers = []
         self.setup_logger()
     
     def setup_logger(self):
@@ -23,14 +24,21 @@ class Logger:
                 f.truncate(0)
         
         # 配置logging
+        file_handler = logging.FileHandler(self.log_file, encoding='utf-8')
+        stream_handler = logging.StreamHandler()
+        self.handlers = [file_handler, stream_handler]
+        
         logging.basicConfig(
             level=logging.INFO,
             format=log_format,
-            handlers=[
-                logging.FileHandler(self.log_file, encoding='utf-8'),
-                logging.StreamHandler()
-            ]
+            handlers=self.handlers
         )
+    
+    def __del__(self):
+        # 在对象被销毁时关闭所有处理器
+        for handler in self.handlers:
+            handler.close()
+            logging.getLogger().removeHandler(handler)
     
     def info(self, message):
         logging.info(message)
