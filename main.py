@@ -30,7 +30,7 @@ def check_double_ma_strategy():
         stocks_dict = dict(zip(stocks_info['股票代码'], stocks_info['股票名称']))
             
         # 将结果保存到文件
-        result_file = f'stocks/double_ma_stocks__{current_date}.txt'
+        result_file = 'stocks/double_ma_stocks.txt'
         with open(result_file, 'w', encoding='utf-8') as f:
             f.write(f'符合双重多头排列的股票({current_date}):\n')
             for stock_code in selected_stocks:
@@ -71,7 +71,7 @@ def check_ma_strategy():
             os.makedirs('stocks')
             
         # 将结果保存到文件
-        result_file = f'stocks/ma_stocks_{current_date}.txt'
+        result_file = 'stocks/ma_stocks.txt'
         with open(result_file, 'w', encoding='utf-8') as f:
             f.write(f'符合均线金叉条件的股票({current_date}):\n')
             for stock_code in selected_stocks:

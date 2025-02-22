@@ -4,7 +4,6 @@ import datetime
 
 class Logger:
     def __init__(self):
-        self.current_date = datetime.datetime.now().strftime('%Y-%m-%d')
         self.log_file = None
         self.handlers = []
         self.setup_logger()
@@ -16,7 +15,7 @@ class Logger:
         
         # 配置日志格式
         log_format = '%(asctime)s - %(levelname)s - %(message)s'
-        self.log_file = f'logs/stock_analysis_{self.current_date}.log'
+        self.log_file = 'logs/stock_analysis.log'
         
         # 如果日志文件存在，先清空内容
         if os.path.exists(self.log_file):

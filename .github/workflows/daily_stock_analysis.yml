@@ -45,34 +45,34 @@ jobs:
           prerelease: false
 
       - name: Upload logs
-        if: hashFiles('./logs/stock_analysis_${{ steps.datetime.outputs.date }}.log') != ''
+        if: hashFiles('./logs/stock_analysis.log') != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./logs/stock_analysis_${{ steps.datetime.outputs.date }}.log
-          asset_name: stock_analysis_${{ steps.datetime.outputs.date }}_${{ steps.datetime.outputs.timestamp }}.log
+          asset_path: ./logs/stock_analysis.log
+          asset_name: stock_analysis_${{ steps.datetime.outputs.timestamp }}.log
           asset_content_type: text/plain
 
       - name: Upload MA strategy results
-        if: hashFiles('./stocks/ma_stocks_${{ steps.datetime.outputs.date }}.txt') != ''
+        if: hashFiles('./stocks/ma_stocks.txt') != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./stocks/ma_stocks_${{ steps.datetime.outputs.date }}.txt
-          asset_name: ma_stocks_${{ steps.datetime.outputs.date }}_${{ steps.datetime.outputs.timestamp }}.txt
+          asset_path: ./stocks/ma_stocks.txt
+          asset_name: ma_stocks_${{ steps.datetime.outputs.timestamp }}.txt
           asset_content_type: text/plain
 
       - name: Upload Double MA strategy results
-        if: hashFiles('./stocks/double_ma_stocks_${{ steps.datetime.outputs.date }}.txt') != ''
+        if: hashFiles('./stocks/double_ma_stocks.txt') != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./stocks/double_ma_stocks_${{ steps.datetime.outputs.date }}.txt
-          asset_name: double_ma_stocks_${{ steps.datetime.outputs.date }}_${{ steps.datetime.outputs.timestamp }}.txt
+          asset_path: ./stocks/double_ma_stocks.txt
+          asset_name: double_ma_stocks_${{ steps.datetime.outputs.timestamp }}.txt
           asset_content_type: text/plain
