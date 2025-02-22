@@ -1,6 +1,9 @@
 import pandas as pd
 import efinance as ef
 from utils.logger import Logger
+from multiprocessing import Pool, cpu_count
+from functools import partial
+import numpy as np
 
 class DoubleMaStrategy:
     def __init__(self):
@@ -58,21 +61,72 @@ class DoubleMaStrategy:
             logger.error(f"处理股票 {stock_code} 时发生错误：{str(e)}")
             return False
     
+    def process_stock_batch(self, stock_codes):
+        """批量处理股票数据"""
+        results = []
+        # 批量获取数据
+        history_data = ef.stock.get_quote_history(stock_codes, beg='2022-01-01')
+        
+        for stock_code in stock_codes:
+            try:
+                if stock_code not in history_data:
+                    continue
+                    
+                day_data = history_data[stock_code]
+                if day_data is None or day_data.empty:
+                    continue
+                
+                # 转换数据格式
+                day_data['date'] = pd.to_datetime(day_data['日期'])
+                day_data['close'] = day_data['收盘'].astype(float)
+                
+                # 获取周线数据
+                week_data = day_data.set_index('date').resample('W').agg({
+                    'close': 'last'
+                }).reset_index()
+                
+                if len(day_data) < 120 or len(week_data) < 120:
+                    continue
+                    
+                # 计算日线和周线均线
+                day_ma = self.calculate_ma(day_data, self.ma_periods)
+                week_ma = self.calculate_ma(week_data, self.ma_periods)
+                
+                # 检查条件
+                if self.check_ma_alignment(day_ma) and self.check_ma_alignment(week_ma):
+                    results.append(stock_code)
+                    
+            except Exception as e:
+                logger = Logger()
+                logger.error(f"处理股票 {stock_code} 时发生错误：{str(e)}")
+                continue
+                
+        return results
+
     def scan_stocks(self):
         """扫描所有股票"""
-        selected_stocks = []
         logger = Logger()
         
         # 获取股票池
         stocks = ef.stock.get_realtime_quotes()
-        logger.info(f"获取股票池完成，共 {len(stocks)} 只股票")
+        stock_codes = stocks['股票代码'].tolist()
+        logger.info(f"获取股票池完成，共 {len(stock_codes)} 只股票")
         
-        for index, stock in stocks.iterrows():
-            stock_code = stock['股票代码']
-            logger.info(f"正在分析第 {index+1}/{len(stocks)} 只股票: {stock_code}")
+        # 将股票列表分成多个批次
+        num_processes = cpu_count()
+        batch_size = len(stock_codes) // num_processes
+        batches = [stock_codes[i:i + batch_size] for i in range(0, len(stock_codes), batch_size)]
+        
+        # 使用多进程处理
+        with Pool(num_processes) as pool:
+            results = pool.map(self.process_stock_batch, batches)
+        
+        # 合并结果
+        selected_stocks = []
+        for batch_result in results:
+            selected_stocks.extend(batch_result)
             
-            if self.process_stock_data(stock_code):
-                selected_stocks.append(stock_code)
-                logger.info(f"发现符合条件的股票：{stock_code}")
+        for stock_code in selected_stocks:
+            logger.info(f"发现符合条件的股票：{stock_code}")
         
         return selected_stocks
