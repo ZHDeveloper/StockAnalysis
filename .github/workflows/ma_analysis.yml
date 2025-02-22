@@ -10,7 +10,8 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -24,12 +25,45 @@ jobs:
           
       - name: Run MA strategy analysis
         run: python main.py --strategy ma
-        
-      - name: Commit and push if there are changes
+
+      - name: Get current date and time
+        id: datetime
+        env:
+          TZ: Asia/Shanghai
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add stocks/ma_stocks.txt
-          git add logs/stock_analysis_*.log
-          git commit -m "Update MA strategy analysis results" || exit 0
-          git push
+          echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.datetime.outputs.timestamp }}
+          release_name: MA Strategy Analysis Report ${{ steps.datetime.outputs.date }}
+          draft: false
+          prerelease: false
+
+      - name: Upload logs
+        if: hashFiles('./logs/stock_analysis.log') != ''
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./logs/stock_analysis.log
+          asset_name: stock_analysis_${{ steps.datetime.outputs.timestamp }}.log
+          asset_content_type: text/plain
+
+      - name: Upload MA strategy results
+        if: hashFiles('./stocks/ma_stocks.txt') != ''
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./stocks/ma_stocks.txt
+          asset_name: ma_stocks_${{ steps.datetime.outputs.timestamp }}.txt
+          asset_content_type: text/plain
+        
