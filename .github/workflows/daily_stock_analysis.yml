@@ -48,8 +48,8 @@ jobs:
     - name: Get file lists
       id: files
       run: |
-        echo "logs=$(ls -1 logs/)" >> $GITHUB_OUTPUT
-        echo "stocks=$(ls -1 stocks/)" >> $GITHUB_OUTPUT
+        echo "logs=$(ls -1 logs/ | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+        echo "stocks=$(ls -1 stocks/ | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
     
     outputs:
       release_url: ${{ steps.create_release.outputs.upload_url }}
