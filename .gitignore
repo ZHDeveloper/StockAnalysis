@@ -3,7 +3,7 @@
 # 忽略logs目录下的所有文件
 logs/
 
-# 忽略path目录及其内容
+# 忽略path目录及其下的所有文件
 path/
 
 # 忽略stocks目录下的所有文件
@@ -13,3 +13,4 @@ stocks/
 __pycache__/
 *.py[cod]
 *$py.class
+

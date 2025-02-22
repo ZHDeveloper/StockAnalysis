@@ -1,0 +1,35 @@
+name: MA Strategy Analysis
+
+on:
+  schedule:
+    # 每个交易日（周一至周五）下午3点运行
+    - cron: '0 7 * * 1-5'  # UTC时间7:00，对应北京时间15:00
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Run MA strategy analysis
+        run: python main.py --strategy ma
+        
+      - name: Commit and push if there are changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add stocks/ma_stocks.txt
+          git add logs/stock_analysis_*.log
+          git commit -m "Update MA strategy analysis results" || exit 0
+          git push

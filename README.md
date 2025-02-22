@@ -51,7 +51,19 @@ python main.py --strategy ma
    - 内容：列出当天所有符合条件的股票代码
 
 ## 自动化运行
-项目已配置GitHub Actions，可以实现每个交易日自动运行分析并更新结果。详细配置请查看`.github/workflows/daily_stock_analysis.yml`文件。
+项目已配置GitHub Actions工作流，实现每个交易日（周一至周五）下午3点自动运行分析并更新结果：
+
+1. 均线金叉策略自动分析
+   - 配置文件：`.github/workflows/ma_analysis.yml`
+   - 执行时间：每个交易日下午3点
+   - 自动更新：`stocks/ma_stocks.txt`和相关日志
+
+2. 双均线多头排列策略自动分析
+   - 配置文件：`.github/workflows/double_ma_analysis.yml`
+   - 执行时间：每个交易日下午3点
+   - 自动更新：`stocks/double_ma_stocks.txt`和相关日志
+
+所有分析结果都会自动提交到仓库，您可以在GitHub上查看每日更新的选股结果。
 
 ## 注意事项
 1. 本工具仅供学习和参考，不构成任何投资建议
