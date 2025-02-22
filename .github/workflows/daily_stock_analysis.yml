@@ -28,9 +28,11 @@ jobs:
     - name: Run analysis
       run: python main.py --strategy ${{ matrix.strategy }}
     
-    - name: Get current date
-      id: date
-      run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+    - name: Get current date and time
+      id: datetime
+      run: |
+        echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+        echo "timestamp=$(date +'%H-%M-%S')" >> $GITHUB_OUTPUT
     
     - name: Create Release
       id: create_release
@@ -38,8 +40,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: stock-analysis-${{ steps.date.outputs.date }}
-        release_name: Stock Analysis Report ${{ steps.date.outputs.date }}
+        tag_name: stock-analysis-${{ steps.datetime.outputs.date }}-${{ steps.datetime.outputs.timestamp }}
+        release_name: Stock Analysis Report ${{ steps.datetime.outputs.date }}
         draft: false
         prerelease: false
     
