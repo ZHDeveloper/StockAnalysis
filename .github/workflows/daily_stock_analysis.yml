@@ -25,9 +25,11 @@ jobs:
       - name: Run stock analysis
         run: python main.py
 
-      - name: Get current date
-        id: date
-        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+      - name: Get current date and time
+        id: datetime
+        run: |
+          echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
 
       - name: Create Release
         id: create_release
@@ -35,40 +37,40 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ steps.date.outputs.date }}
-          release_name: Stock Analysis Report ${{ steps.date.outputs.date }}
+          tag_name: v${{ steps.datetime.outputs.timestamp }}
+          release_name: Stock Analysis Report ${{ steps.datetime.outputs.date }}
           draft: false
           prerelease: false
 
       - name: Upload logs
-        if: hashFiles('./logs/stock_analysis_${{ steps.date.outputs.date }}.log') != ''
+        if: hashFiles('./logs/stock_analysis_${{ steps.datetime.outputs.date }}.log') != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./logs/stock_analysis_${{ steps.date.outputs.date }}.log
-          asset_name: stock_analysis_${{ steps.date.outputs.date }}.log
+          asset_path: ./logs/stock_analysis_${{ steps.datetime.outputs.date }}.log
+          asset_name: stock_analysis_${{ steps.datetime.outputs.date }}_${{ steps.datetime.outputs.timestamp }}.log
           asset_content_type: text/plain
 
       - name: Upload MA strategy results
-        if: hashFiles('./stocks/ma_stocks_${{ steps.date.outputs.date }}.txt') != ''
+        if: hashFiles('./stocks/ma_stocks_${{ steps.datetime.outputs.date }}.txt') != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./stocks/ma_stocks_${{ steps.date.outputs.date }}.txt
-          asset_name: ma_stocks_${{ steps.date.outputs.date }}.txt
+          asset_path: ./stocks/ma_stocks_${{ steps.datetime.outputs.date }}.txt
+          asset_name: ma_stocks_${{ steps.datetime.outputs.date }}_${{ steps.datetime.outputs.timestamp }}.txt
           asset_content_type: text/plain
 
       - name: Upload Double MA strategy results
-        if: hashFiles('./stocks/double_ma_stocks_${{ steps.date.outputs.date }}.txt') != ''
+        if: hashFiles('./stocks/double_ma_stocks_${{ steps.datetime.outputs.date }}.txt') != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./stocks/double_ma_stocks_${{ steps.date.outputs.date }}.txt
-          asset_name: double_ma_stocks_${{ steps.date.outputs.date }}.txt
+          asset_path: ./stocks/double_ma_stocks_${{ steps.datetime.outputs.date }}.txt
+          asset_name: double_ma_stocks_${{ steps.datetime.outputs.date }}_${{ steps.datetime.outputs.timestamp }}.txt
           asset_content_type: text/plain
