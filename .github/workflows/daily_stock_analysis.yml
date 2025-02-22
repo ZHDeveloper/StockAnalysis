@@ -41,6 +41,7 @@ jobs:
           prerelease: false
 
       - name: Upload logs
+        if: hashFiles('./logs/stock_analysis_${{ steps.date.outputs.date }}.log') != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -51,6 +52,7 @@ jobs:
           asset_content_type: text/plain
 
       - name: Upload MA strategy results
+        if: hashFiles('./stocks/ma_stocks_${{ steps.date.outputs.date }}.txt') != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -61,6 +63,7 @@ jobs:
           asset_content_type: text/plain
 
       - name: Upload Double MA strategy results
+        if: hashFiles('./stocks/double_ma_stocks_${{ steps.date.outputs.date }}.txt') != ''
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
