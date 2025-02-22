@@ -25,17 +25,23 @@ def check_double_ma_strategy():
         if not os.path.exists('stocks'):
             os.makedirs('stocks')
             
+        # 获取实时行情数据以获取股票名称
+        stocks_info = ef.stock.get_realtime_quotes()
+        stocks_dict = dict(zip(stocks_info['股票代码'], stocks_info['股票名称']))
+            
         # 将结果保存到文件
         result_file = f'stocks/double_ma_stocks__{current_date}.txt'
         with open(result_file, 'w', encoding='utf-8') as f:
             f.write(f'符合双重多头排列的股票({current_date}):\n')
-            for stock in selected_stocks:
-                f.write(f'股票代码：{stock}\n')
+            for stock_code in selected_stocks:
+                stock_name = stocks_dict.get(stock_code, '未知')
+                f.write(f'股票代码：{stock_code}  股票名称：{stock_name}\n')
             f.write(f'\n共找到 {len(selected_stocks)} 只符合条件的股票')
         
         logger.info(f"符合双重多头排列的股票({current_date}):")
-        for stock in selected_stocks:
-            logger.info(f"股票代码：{stock}")
+        for stock_code in selected_stocks:
+            stock_name = stocks_dict.get(stock_code, '未知')
+            logger.info(f"股票代码：{stock_code}  股票名称：{stock_name}")
         logger.info(f"共找到 {len(selected_stocks)} 只符合条件的股票")
         logger.info(f"筛选结果已保存到文件：{result_file}")
     else:
@@ -52,6 +58,7 @@ def check_ma_strategy():
     # 获取所有A股股票
     stocks = ef.stock.get_realtime_quotes()
     stock_list = stocks['股票代码'].tolist()
+    stocks_dict = dict(zip(stocks['股票代码'], stocks['股票名称']))
     
     # 执行选股策略
     selected_stocks = strategy.scan_stocks(stock_list)
@@ -67,13 +74,15 @@ def check_ma_strategy():
         result_file = f'stocks/ma_stocks_{current_date}.txt'
         with open(result_file, 'w', encoding='utf-8') as f:
             f.write(f'符合均线金叉条件的股票({current_date}):\n')
-            for stock in selected_stocks:
-                f.write(f'股票代码：{stock}\n')
+            for stock_code in selected_stocks:
+                stock_name = stocks_dict.get(stock_code, '未知')
+                f.write(f'股票代码：{stock_code}  股票名称：{stock_name}\n')
             f.write(f'\n共找到 {len(selected_stocks)} 只符合条件的股票')
         
         logger.info(f"符合均线金叉条件的股票({current_date}):")
-        for stock in selected_stocks:
-            logger.info(f"股票代码：{stock}")
+        for stock_code in selected_stocks:
+            stock_name = stocks_dict.get(stock_code, '未知')
+            logger.info(f"股票代码：{stock_code}  股票名称：{stock_name}")
         logger.info(f"共找到 {len(selected_stocks)} 只符合条件的股票")
         logger.info(f"筛选结果已保存到文件：{result_file}")
     else:

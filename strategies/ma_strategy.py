@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import efinance as ef
 from datetime import datetime, timedelta
+from utils.logger import Logger
 
 class MAStrategy:
     def __init__(self, short_period=5, long_period=20):
@@ -55,10 +56,12 @@ class MAStrategy:
     def scan_stocks(self, stock_list):
         """扫描股票池"""
         selected_stocks = []
+        logger = Logger()
         
-        for stock in stock_list:
+        for index, stock in enumerate(stock_list):
+            logger.info(f"正在分析第 {index+1}/{len(stock_list)} 只股票: {stock}")
             if self.check_stock(stock):
                 selected_stocks.append(stock)
-                print(f"发现符合条件的股票：{stock}")
+                logger.info(f"发现符合条件的股票：{stock}")
                 
         return selected_stocks
