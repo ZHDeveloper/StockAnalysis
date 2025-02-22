@@ -27,6 +27,8 @@ jobs:
 
       - name: Get current date and time
         id: datetime
+        env:
+          TZ: Asia/Shanghai
         run: |
           echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
           echo "timestamp=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
