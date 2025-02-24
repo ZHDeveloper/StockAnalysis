@@ -168,5 +168,7 @@ class CostStrategy:
         output += "\n建议理由："
         for reason in result['reason']:
             output += f"\n - {reason}"
-        
+
+        output += f"\n\n"
+
         return output

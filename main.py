@@ -114,7 +114,7 @@ def analyze_stock_cost():
             
             # 根据配置决定是否发送钉钉消息
             if stock['notify_dingtalk']:
-                dingtalk_message = f"股票分析结果\n{formatted_result}"
+                dingtalk_message = f"股票分析结果\n{formatted_result.rstrip()}"
                 if DingTalkBot().send_text_message(dingtalk_message):
                     logger.info(f"股票 {stock['code']} 的分析结果已发送到钉钉群")
                 else:
