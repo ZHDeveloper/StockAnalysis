@@ -3,11 +3,7 @@ import time
 import os
 import efinance as ef
 import argparse
-import hmac
-import hashlib
-import base64
-import urllib.parse
-import requests
+from utils.dingtalk import DingTalkBot
 from strategies.double_ma_strategy import DoubleMaStrategy
 from strategies.ma_strategy import MAStrategy
 from strategies.cost_strategy import CostStrategy
@@ -94,40 +90,6 @@ def check_ma_strategy():
     else:
         logger.info(f"当日无符合条件股票({current_date})")
 
-def send_dingtalk_message(message):
-    """发送钉钉消息"""
-    webhook = "https://oapi.dingtalk.com/robot/send?access_token=c4c9c26fa56f416d5dd9181c3ebe8da6ea8453f2c51d3199ce62a1d62108b314"
-    secret = "SEC8d81304eae6789fec96739e6a77ae6e330eceb89a3a03ef9608db30ecd213669"
-    
-    # 计算时间戳和签名
-    timestamp = str(round(time.time() * 1000))
-    secret_enc = secret.encode('utf-8')
-    string_to_sign = f"{timestamp}\n{secret}"
-    string_to_sign_enc = string_to_sign.encode('utf-8')
-    hmac_code = hmac.new(secret_enc, string_to_sign_enc, digestmod=hashlib.sha256).digest()
-    sign = urllib.parse.quote_plus(base64.b64encode(hmac_code))
-    
-    # 构建请求URL
-    webhook = f"{webhook}&timestamp={timestamp}&sign={sign}"
-    
-    # 构建请求数据
-    headers = {'Content-Type': 'application/json'}
-    data = {
-        "msgtype": "text",
-        "text": {"content": message}
-    }
-    
-    # 发送请求
-    try:
-        response = requests.post(webhook, headers=headers, json=data)
-        if response.status_code == 200:
-            return True
-        else:
-            return False
-    except Exception as e:
-        print(f"发送钉钉消息失败：{str(e)}")
-        return False
-
 def analyze_stock_cost():
     logger = Logger()
     logger.info("开始执行成本分析...")
@@ -139,7 +101,7 @@ def analyze_stock_cost():
     strategy = CostStrategy()
     
     # 分析股票
-    result = strategy.analyze_stock(cost_args.code, cost_args.cost)
+    result = strategy.analyze_stock(cost_args.code, cost_args.cost)    
     
     # 输出分析结果
     if result:
@@ -148,14 +110,14 @@ def analyze_stock_cost():
         
         # 发送钉钉消息
         dingtalk_message = f"股票分析结果\n{formatted_result}"
-        if send_dingtalk_message(dingtalk_message):
+        if DingTalkBot().send_text_message(dingtalk_message):
             logger.info("分析结果已发送到钉钉群")
         else:
             logger.error("发送钉钉消息失败")
     else:
         error_message = "分析失败，请检查股票代码是否正确"
         logger.error(error_message)
-        send_dingtalk_message(f"股票分析失败\n{error_message}")
+        DingTalkBot().send_dingtalk_message(f"股票分析失败\n{error_message}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='股票分析工具')
