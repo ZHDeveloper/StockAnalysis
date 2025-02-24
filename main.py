@@ -122,7 +122,7 @@ def analyze_stock_cost():
             error_message = f"股票 {stock['code']} 分析失败，请检查股票代码是否正确"
             logger.error(error_message)
             if stock['notify_dingtalk']:
-                DingTalkBot().send_dingtalk_message(f"股票分析失败\n{error_message}")
+                DingTalkBot().send_text_message(f"股票分析失败\n{error_message}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='股票分析工具')
