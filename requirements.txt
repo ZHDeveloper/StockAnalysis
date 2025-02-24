@@ -1,2 +1,3 @@
 pandas>=1.3.0
+efinance>=0.5.3
 akshare
