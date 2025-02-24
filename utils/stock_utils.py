@@ -1,5 +1,6 @@
-import efinance as ef
+import akshare as ak
 
-stocks = ef.stock.get_realtime_quotes()
-stock_list = stocks['股票代码'].tolist()
-stocks_dict = dict(zip(stocks['股票代码'], stocks['股票名称']))
+# 获取A股所有股票的实时行情
+stocks = ak.stock_zh_a_spot_em()
+stock_list = stocks['代码'].tolist()
+stocks_dict = dict(zip(stocks['代码'], stocks['名称']))

@@ -1,7 +1,6 @@
 import datetime
 import time
 import os
-import efinance as ef
 import argparse
 from utils.dingtalk import DingTalkBot
 from strategies.double_ma_strategy import DoubleMaStrategy
