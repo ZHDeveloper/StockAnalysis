@@ -54,7 +54,9 @@ def check_ma_strategy():
     logger.info("开始执行均线金叉选股程序...")
     
     # 初始化策略
-    strategy = MAStrategy(short_period=5, long_period=20)
+    strategy = MAStrategy(
+        confirmation_days=2  # 要求金叉前两天均满足条件
+    )
     current_date = datetime.datetime.now().strftime('%Y-%m-%d')
     
     # 获取所有A股股票
