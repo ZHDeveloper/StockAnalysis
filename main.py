@@ -8,6 +8,8 @@ from strategies.double_ma_strategy import DoubleMaStrategy
 from strategies.ma_strategy import MAStrategy
 from strategies.cost_strategy import CostStrategy
 from utils.logger import Logger
+# 从stock_utils导入股票列表相关变量
+from utils.stock_utils import stock_list, stocks_dict
 
 def check_double_ma_strategy():
     logger = Logger()
@@ -18,7 +20,7 @@ def check_double_ma_strategy():
     current_date = datetime.datetime.now().strftime('%Y-%m-%d')
     
     # 执行选股策略
-    selected_stocks = strategy.scan_stocks()
+    selected_stocks = strategy.scan_stocks(stock_list)
     
     logger.info("分析完成！")
     # 输出选股结果
@@ -27,12 +29,9 @@ def check_double_ma_strategy():
         if not os.path.exists('stocks'):
             os.makedirs('stocks')
             
-        # 获取实时行情数据以获取股票名称
-        stocks_info = ef.stock.get_realtime_quotes()
-        stocks_dict = dict(zip(stocks_info['股票代码'], stocks_info['股票名称']))
-            
-        # 将结果保存到文件
+        # 定义结果文件路径
         result_file = 'stocks/double_ma_stocks.txt'
+            
         with open(result_file, 'w', encoding='utf-8') as f:
             f.write(f'符合双重多头排列的股票({current_date}):\n')
             for stock_code in selected_stocks:
@@ -58,12 +57,7 @@ def check_ma_strategy():
         confirmation_days=2  # 要求金叉前两天均满足条件
     )
     current_date = datetime.datetime.now().strftime('%Y-%m-%d')
-    
-    # 获取所有A股股票
-    stocks = ef.stock.get_realtime_quotes()
-    stock_list = stocks['股票代码'].tolist()
-    stocks_dict = dict(zip(stocks['股票代码'], stocks['股票名称']))
-    
+        
     # 执行选股策略
     selected_stocks = strategy.scan_stocks(stock_list)
     

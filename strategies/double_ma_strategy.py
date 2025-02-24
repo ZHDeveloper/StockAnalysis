@@ -103,13 +103,12 @@ class DoubleMaStrategy:
                 
         return results
 
-    def scan_stocks(self):
+    def scan_stocks(self, stock_list):
         """扫描所有股票"""
         logger = Logger()
         
         # 获取股票池
-        stocks = ef.stock.get_realtime_quotes()
-        stock_codes = stocks['股票代码'].tolist()
+        stock_codes = stock_list if isinstance(stock_list, list) else stock_list['股票代码'].tolist()
         logger.info(f"获取股票池完成，共 {len(stock_codes)} 只股票")
         
         # 将股票列表分成多个批次

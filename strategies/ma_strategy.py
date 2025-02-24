@@ -15,7 +15,7 @@ class MAStrategy:
         :param volume_ma_period: 成交量均线周期，默认5天
         :param volume_multiplier: 成交量放大倍数，默认1.5
         :param confirmation_days: 金叉确认天数，默认1天
-        :param use_rsi: 是否使用RSI指标，默认False
+        :param use_rsi: 是否使用RSI指标，默认True
         :param rsi_period: RSI计算周期，默认14天
         :param rsi_threshold: RSI超买阈值，默认70
         """

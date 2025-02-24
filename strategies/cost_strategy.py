@@ -157,7 +157,7 @@ class CostStrategy:
         if result is None:
             return "分析失败，无法获取有效数据"
             
-        stock_name = ef.stock.get_base_info(result['stock_code']).get('股票名称', '未知')  # 获取股票名称
+        stock_name = stocks_dict.get(stock_code, '未知')
         
         output = f"\n股票代码：{result['stock_code']} ({stock_name})"
         output += f"\n当前价格：{result['current_price']:.2f}"
