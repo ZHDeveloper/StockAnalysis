@@ -66,24 +66,33 @@ class CostStrategy:
             
             # 判断加仓条件
             if price_change_ratio <= self.add_position_threshold:
+                analysis_result['suggestion'] = '建议观望'
+                analysis_result['reason'].append(f'当前价格低于成本价{abs(price_change_ratio*100):.2f}%')
                 if latest_price > latest_ma60 and latest_ma5 > latest_ma10:
                     analysis_result['suggestion'] = '建议加仓'
-                    analysis_result['reason'].append(f'当前价格低于成本价{abs(price_change_ratio*100):.2f}%')
                     analysis_result['reason'].append('价格站在60日均线上方，短期均线向好')
+                else:
+                    analysis_result['reason'].append('等待技术面企稳后再考虑加仓')
             
             # 判断卖出条件
             elif price_change_ratio >= self.take_profit_threshold:
+                analysis_result['suggestion'] = '建议持有'
+                analysis_result['reason'].append(f'已盈利{price_change_ratio*100:.2f}%')
                 if latest_price < latest_ma5 and latest_ma5 < latest_ma10:
                     analysis_result['suggestion'] = '建议卖出止盈'
-                    analysis_result['reason'].append(f'已盈利{price_change_ratio*100:.2f}%')
                     analysis_result['reason'].append('均线呈现下跌趋势')
+                else:
+                    analysis_result['reason'].append('走势仍然强势，可继续持有')
             
             # 判断止损条件
             elif price_change_ratio <= self.stop_loss_threshold:
+                analysis_result['suggestion'] = '建议观望'
+                analysis_result['reason'].append(f'已亏损{abs(price_change_ratio*100):.2f}%')
                 if latest_price < latest_ma20 and latest_ma5 < latest_ma10:
                     analysis_result['suggestion'] = '建议止损'
-                    analysis_result['reason'].append(f'已亏损{abs(price_change_ratio*100):.2f}%')
                     analysis_result['reason'].append('价格跌破20日均线，技术面走弱')
+                else:
+                    analysis_result['reason'].append('等待反弹机会再考虑操作')
             
             # 其他情况
             else:
@@ -105,7 +114,9 @@ class CostStrategy:
         if result is None:
             return "分析失败，无法获取有效数据"
             
-        output = f"\n股票代码：{result['stock_code']}"
+        stock_name = ef.stock.get_base_info(result['stock_code']).get('股票名称', '未知')  # 获取股票名称
+        
+        output = f"\n股票代码：{result['stock_code']} ({stock_name})"
         output += f"\n当前价格：{result['current_price']:.2f}"
         output += f"\n成本价格：{result['cost_price']:.2f}"
         output += f"\n涨跌幅：{result['price_change_ratio']*100:.2f}%"
