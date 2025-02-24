@@ -5,6 +5,7 @@ import efinance as ef
 import argparse
 from strategies.double_ma_strategy import DoubleMaStrategy
 from strategies.ma_strategy import MAStrategy
+from strategies.cost_strategy import CostStrategy
 from utils.logger import Logger
 
 def check_double_ma_strategy():
@@ -88,12 +89,40 @@ def check_ma_strategy():
     else:
         logger.info(f"当日无符合条件股票({current_date})")
 
+def analyze_stock_cost():
+    logger = Logger()
+    logger.info("开始执行成本分析...")
+    
+    # 获取命令行参数
+    global cost_args
+    
+    # 初始化策略
+    strategy = CostStrategy()
+    
+    # 分析股票
+    result = strategy.analyze_stock(cost_args.code, cost_args.cost)
+    
+    # 输出分析结果
+    if result:
+        formatted_result = strategy.format_analysis_result(result)
+        logger.info(formatted_result)
+    else:
+        logger.error("分析失败，请检查股票代码是否正确")
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='股票分析工具')
-    parser.add_argument('--strategy', choices=['ma', 'double_ma'], default='double_ma', help='选择策略：ma(均线金叉) 或 double_ma(双均线多头排列)')
-    args = parser.parse_args()
+    parser.add_argument('--strategy', choices=['ma', 'double_ma', 'cost'], default='double_ma', 
+                        help='选择策略：ma(均线金叉)、double_ma(双均线多头排列)或cost(成本分析)')
+    args, remaining_args = parser.parse_known_args()
     
     if args.strategy == 'ma':
         check_ma_strategy()
+    elif args.strategy == 'cost':
+        # 使用剩余参数重新解析成本分析所需的参数
+        cost_parser = argparse.ArgumentParser(description='股票成本分析')
+        cost_parser.add_argument('--code', required=True, help='股票代码')
+        cost_parser.add_argument('--cost', type=float, required=True, help='成本价格')
+        cost_args = cost_parser.parse_args(remaining_args)
+        analyze_stock_cost()
     else:
         check_double_ma_strategy()
