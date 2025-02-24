@@ -24,7 +24,7 @@ jobs:
           pip install -r requirements.txt
           
       - name: Run cost analysis
-        run: python main.py --strategy cost --code 600004 --cost 9.6
+        run: python main.py --strategy cost
         
       - name: Commit and push if changed
         run: |
