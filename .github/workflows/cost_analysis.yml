@@ -3,6 +3,7 @@ name: Cost Analysis
 on:
   schedule:
     - cron: '0 2,6 * * *'  # UTC时间2点和6点，对应北京时间10点和14点
+  workflow_dispatch:  # 添加手动触发支持
 
 jobs:
   analyze:
