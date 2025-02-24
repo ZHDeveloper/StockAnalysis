@@ -20,7 +20,7 @@ def check_double_ma_strategy():
     # 执行选股策略
     selected_stocks = strategy.scan_stocks()
     
-    logger.info("\n分析完成！")
+    logger.info("分析完成！")
     # 输出选股结果
     if selected_stocks:
         # 创建 stocks 目录（如果不存在）
@@ -67,7 +67,7 @@ def check_ma_strategy():
     # 执行选股策略
     selected_stocks = strategy.scan_stocks(stock_list)
     
-    logger.info("\n分析完成！")
+    logger.info("分析完成！")
     # 输出选股结果
     if selected_stocks:
         # 创建 stocks 目录（如果不存在）

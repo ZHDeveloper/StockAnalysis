@@ -7,7 +7,7 @@ from tqdm import tqdm
 from multiprocessing import Pool, cpu_count
 
 class MAStrategy:
-    def __init__(self, short_period=5, long_period=20, volume_ma_period=5, volume_multiplier=1.5, confirmation_days=1, use_rsi=False, rsi_period=14, rsi_threshold=70):
+    def __init__(self, short_period=5, long_period=20, volume_ma_period=5, volume_multiplier=1.5, confirmation_days=1, use_rsi=True, rsi_period=14, rsi_threshold=70):
         """
         初始化策略参数
         :param short_period: 短期均线周期，默认5天
