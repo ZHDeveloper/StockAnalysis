@@ -1,9 +1,11 @@
 import pandas as pd
-import efinance as ef
+import akshare as ak
 from utils.logger import Logger
 from multiprocessing import Pool, cpu_count
 from functools import partial
 import numpy as np
+from datetime import datetime, timedelta
+from tqdm import tqdm
 
 class DoubleMaStrategy:
     def __init__(self):
@@ -29,7 +31,7 @@ class DoubleMaStrategy:
         """处理单个股票数据"""
         try:
             # 获取日线数据
-            day_data = ef.stock.get_quote_history(stock_code, beg='2022-01-01')
+            day_data = ak.stock_zh_a_hist(symbol=stock_code, period="daily", start_date=(datetime.now() - timedelta(days=365)).strftime('%Y%m%d'), end_date=datetime.now().strftime('%Y%m%d'))
             if day_data is None or day_data.empty:
                 return False
             
@@ -64,38 +66,11 @@ class DoubleMaStrategy:
     def process_stock_batch(self, stock_codes):
         """批量处理股票数据"""
         results = []
-        # 批量获取数据
-        history_data = ef.stock.get_quote_history(stock_codes, beg='2022-01-01')
         
-        for stock_code in stock_codes:
+        for stock_code in tqdm(stock_codes, desc="处理当前批次", leave=False):
             try:
-                if stock_code not in history_data:
-                    continue
-                    
-                day_data = history_data[stock_code]
-                if day_data is None or day_data.empty:
-                    continue
-                
-                # 转换数据格式
-                day_data['date'] = pd.to_datetime(day_data['日期'])
-                day_data['close'] = day_data['收盘'].astype(float)
-                
-                # 获取周线数据
-                week_data = day_data.set_index('date').resample('W').agg({
-                    'close': 'last'
-                }).reset_index()
-                
-                if len(day_data) < 120 or len(week_data) < 120:
-                    continue
-                    
-                # 计算日线和周线均线
-                day_ma = self.calculate_ma(day_data, self.ma_periods)
-                week_ma = self.calculate_ma(week_data, self.ma_periods)
-                
-                # 检查条件
-                if self.check_ma_alignment(day_ma) and self.check_ma_alignment(week_ma):
+                if self.process_stock_data(stock_code):
                     results.append(stock_code)
-                    
             except Exception as e:
                 logger = Logger()
                 logger.error(f"处理股票 {stock_code} 时发生错误：{str(e)}")
@@ -112,13 +87,17 @@ class DoubleMaStrategy:
         logger.info(f"获取股票池完成，共 {len(stock_codes)} 只股票")
         
         # 将股票列表分成多个批次
-        num_processes = cpu_count()
-        batch_size = len(stock_codes) // num_processes
+        num_processes = min(cpu_count(), len(stock_codes))  # 确保进程数不超过股票数量
+        batch_size = max(1, len(stock_codes) // num_processes)  # 确保批处理大小至少为1
         batches = [stock_codes[i:i + batch_size] for i in range(0, len(stock_codes), batch_size)]
         
         # 使用多进程处理
         with Pool(num_processes) as pool:
-            results = pool.map(self.process_stock_batch, batches)
+            results = list(tqdm(
+                pool.imap(self.process_stock_batch, batches),
+                total=len(batches),
+                desc="分析股票批次进度"
+            ))
         
         # 合并结果
         selected_stocks = []
