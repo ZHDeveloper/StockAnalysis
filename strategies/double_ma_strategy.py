@@ -1,9 +1,6 @@
 import pandas as pd
-import akshare as ak
+import yfinance as yf
 from utils.logger import Logger
-from multiprocessing import Pool, cpu_count
-from functools import partial
-import numpy as np
 from datetime import datetime, timedelta
 from tqdm import tqdm
 
@@ -31,13 +28,28 @@ class DoubleMaStrategy:
         """处理单个股票数据"""
         try:
             # 获取日线数据
-            day_data = ak.stock_zh_a_hist(symbol=stock_code, period="daily", start_date=(datetime.now() - timedelta(days=365)).strftime('%Y%m%d'), end_date=datetime.now().strftime('%Y%m%d'))
+            # 根据市场调整后缀
+            if stock_code.startswith('6'):
+                suffix = '.SS'  # 沪市
+            elif stock_code.startswith('0') or stock_code.startswith('3'):
+                suffix = '.SZ'  # 深市
+            else:
+                suffix = '.BJ'  # 北交所或新三板（需进一步验证）
+            yf_code = stock_code + suffix
+            
+            # 获取股票数据
+            stock = yf.Ticker(yf_code)
+            start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+            end_date = datetime.now().strftime('%Y-%m-%d')
+            day_data = stock.history(start=start_date, end=end_date, interval='1d')
+            
             if day_data is None or day_data.empty:
                 return False
             
-            # 转换日期格式并设置收盘价
-            day_data['date'] = pd.to_datetime(day_data['日期'])
-            day_data['close'] = day_data['收盘'].astype(float)
+            # 设置日期和收盘价
+            day_data = day_data.reset_index()
+            day_data['date'] = day_data['Date']
+            day_data['close'] = day_data['Close']
             
             # 获取周线数据
             week_data = day_data.set_index('date').resample('W').agg({
@@ -62,49 +74,24 @@ class DoubleMaStrategy:
             logger = Logger()
             logger.error(f"处理股票 {stock_code} 时发生错误：{str(e)}")
             return False
-    
-    def process_stock_batch(self, stock_codes):
-        """批量处理股票数据"""
-        results = []
-        
-        for stock_code in tqdm(stock_codes, desc="处理当前批次", leave=False):
-            try:
-                if self.process_stock_data(stock_code):
-                    results.append(stock_code)
-            except Exception as e:
-                logger = Logger()
-                logger.error(f"处理股票 {stock_code} 时发生错误：{str(e)}")
-                continue
-                
-        return results
 
     def scan_stocks(self, stock_list):
         """扫描所有股票"""
         logger = Logger()
+        selected_stocks = []
         
         # 获取股票池
         stock_codes = stock_list if isinstance(stock_list, list) else stock_list['股票代码'].tolist()
         logger.info(f"获取股票池完成，共 {len(stock_codes)} 只股票")
         
-        # 将股票列表分成多个批次
-        num_processes = min(cpu_count(), len(stock_codes))  # 确保进程数不超过股票数量
-        batch_size = max(1, len(stock_codes) // num_processes)  # 确保批处理大小至少为1
-        batches = [stock_codes[i:i + batch_size] for i in range(0, len(stock_codes), batch_size)]
-        
-        # 使用多进程处理
-        with Pool(num_processes) as pool:
-            results = list(tqdm(
-                pool.imap(self.process_stock_batch, batches),
-                total=len(batches),
-                desc="分析股票批次进度"
-            ))
-        
-        # 合并结果
-        selected_stocks = []
-        for batch_result in results:
-            selected_stocks.extend(batch_result)
-            
-        for stock_code in selected_stocks:
-            logger.info(f"发现符合条件的股票：{stock_code}")
+        # 顺序处理每只股票
+        for stock_code in tqdm(stock_codes, desc="分析股票进度"):
+            try:
+                if self.process_stock_data(stock_code):
+                    selected_stocks.append(stock_code)
+                    logger.info(f"发现符合条件的股票：{stock_code}")
+            except Exception as e:
+                logger.error(f"处理股票 {stock_code} 时发生错误：{str(e)}")
+                continue
         
         return selected_stocks
