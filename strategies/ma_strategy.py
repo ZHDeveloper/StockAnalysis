@@ -1,8 +1,9 @@
 import pandas as pd
 import numpy as np
-import efinance as ef
+import akshare as ak
 from datetime import datetime, timedelta
 from utils.logger import Logger
+from tqdm import tqdm
 from multiprocessing import Pool, cpu_count
 
 class MAStrategy:
@@ -49,7 +50,7 @@ class MAStrategy:
         """分析单只股票"""
         try:
             # 获取最近60个交易日数据
-            df = ef.stock.get_quote_history(stock_code)
+            df = ak.stock_zh_a_hist(symbol=stock_code, period="daily", start_date=(datetime.now() - timedelta(days=90)).strftime('%Y%m%d'), end_date=datetime.now().strftime('%Y%m%d'))
             if df is None or df.empty or len(df) < max(self.long_period, self.rsi_period if self.use_rsi else 0):
                 return False
 
@@ -96,14 +97,10 @@ class MAStrategy:
     def process_stock_batch(self, stock_codes):
         """批量处理股票数据"""
         results = []
-        history_data = ef.stock.get_quote_history(stock_codes)
         
-        for stock_code in stock_codes:
+        for stock_code in tqdm(stock_codes, desc="处理当前批次", leave=False):
             try:
-                if stock_code not in history_data:
-                    continue
-                    
-                df = history_data[stock_code]
+                df = ak.stock_zh_a_hist(symbol=stock_code, period="daily", start_date=(datetime.now() - timedelta(days=90)).strftime('%Y%m%d'), end_date=datetime.now().strftime('%Y%m%d'))
                 if df is None or df.empty or len(df) < max(self.long_period, self.rsi_period if self.use_rsi else 0):
                     continue
 
@@ -151,13 +148,17 @@ class MAStrategy:
         logger = Logger()
         
         # 将股票列表分成多个批次
-        num_processes = cpu_count()
-        batch_size = len(stock_list) // num_processes
+        num_processes = min(cpu_count(), len(stock_list))  # 确保进程数不超过股票数量
+        batch_size = max(1, len(stock_list) // num_processes)  # 确保批处理大小至少为1
         batches = [stock_list[i:i + batch_size] for i in range(0, len(stock_list), batch_size)]
         
         # 使用多进程处理
         with Pool(num_processes) as pool:
-            results = pool.map(self.process_stock_batch, batches)
+            results = list(tqdm(
+                pool.imap(self.process_stock_batch, batches),
+                total=len(batches),
+                desc="分析股票批次进度"
+            ))
         
         # 合并结果
         selected_stocks = []
@@ -166,5 +167,5 @@ class MAStrategy:
             
         for stock_code in selected_stocks:
             logger.info(f"发现符合条件的股票：{stock_code}")
-                
+        
         return selected_stocks
