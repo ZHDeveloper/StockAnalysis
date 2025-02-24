@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import efinance as ef
+import akshare as ak
 from datetime import datetime, timedelta
 from utils.logger import Logger
 from utils.stock_utils import stocks_dict
@@ -59,11 +59,11 @@ class CostStrategy:
         """分析单只股票"""
         try:
             # 获取3年的历史数据
-            end_date = datetime.now().strftime('%Y-%m-%d')
-            start_date = (datetime.now() - timedelta(days=3*365)).strftime('%Y-%m-%d')
+            end_date = datetime.now().strftime('%Y%m%d')
+            start_date = (datetime.now() - timedelta(days=3*365)).strftime('%Y%m%d')
             
-            # 获取历史数据
-            df = ef.stock.get_quote_history(stock_code, beg=start_date)
+            # 使用akshare获取历史数据
+            df = ak.stock_zh_a_hist(symbol=stock_code, start_date=start_date, end_date=end_date, adjust="qfq")
             if df is None or df.empty:
                 self.logger.error(f"无法获取股票 {stock_code} 的历史数据")
                 return None
