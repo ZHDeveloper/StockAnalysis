@@ -9,18 +9,51 @@ class CostStrategy:
         self.logger = Logger()
         # 定义技术指标参数
         self.ma_periods = [5, 10, 20, 60]
-        # 定义加仓和卖出的阈值
-        self.add_position_threshold = -0.05  # 当前价格低于成本价5%考虑加仓
-        self.take_profit_threshold = 0.1    # 盈利10%考虑止盈
-        self.stop_loss_threshold = -0.1     # 亏损10%考虑止损
+        self.add_position_threshold = -0.05
+        self.take_profit_threshold = 0.1
+        self.stop_loss_threshold = -0.1
         
+        # 新增技术指标参数
+        self.macd_params = {
+            'fast': 12,
+            'slow': 26,
+            'signal': 9
+        }
+        self.rsi_period = 14
+        self.bollinger_period = 20
+        self.bollinger_std = 2
+
     def calculate_ma(self, data):
         """计算多个周期的均线"""
         ma_dict = {}
         for period in self.ma_periods:
             ma_dict[f'MA{period}'] = data['close'].rolling(window=period).mean()
         return ma_dict
-    
+
+    def calculate_macd(self, data):
+        """计算MACD指标"""
+        exp1 = data['close'].ewm(span=self.macd_params['fast']).mean()
+        exp2 = data['close'].ewm(span=self.macd_params['slow']).mean()
+        macd = exp1 - exp2
+        signal = macd.ewm(span=self.macd_params['signal']).mean()
+        return macd, signal
+
+    def calculate_rsi(self, data):
+        """计算RSI指标"""
+        delta = data['close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=self.rsi_period).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=self.rsi_period).mean()
+        rs = gain / loss
+        return 100 - (100 / (1 + rs))
+
+    def calculate_bollinger_bands(self, data):
+        """计算布林带"""
+        middle = data['close'].rolling(window=self.bollinger_period).mean()
+        std = data['close'].rolling(window=self.bollinger_period).std()
+        upper = middle + (std * self.bollinger_std)
+        lower = middle - (std * self.bollinger_std)
+        return upper, middle, lower
+
     def analyze_stock(self, stock_code, cost_price):
         """分析单只股票"""
         try:
@@ -44,12 +77,20 @@ class CostStrategy:
             for ma_name, ma_values in ma_dict.items():
                 df[ma_name] = ma_values
             
+            macd, signal = self.calculate_macd(df)
+            rsi = self.calculate_rsi(df)
+            upper_band, middle_band, lower_band = self.calculate_bollinger_bands(df)
+            
             # 获取最新数据
             latest_price = df['close'].iloc[-1]
             latest_ma5 = df['MA5'].iloc[-1]
             latest_ma10 = df['MA10'].iloc[-1]
             latest_ma20 = df['MA20'].iloc[-1]
             latest_ma60 = df['MA60'].iloc[-1]
+            latest_macd = macd.iloc[-1]
+            latest_signal = signal.iloc[-1]
+            latest_rsi = rsi.iloc[-1]
+            latest_lower_band = lower_band.iloc[-1]
             
             # 计算相对成本价的涨跌幅
             price_change_ratio = (latest_price - cost_price) / cost_price
@@ -68,9 +109,10 @@ class CostStrategy:
             if price_change_ratio <= self.add_position_threshold:
                 analysis_result['suggestion'] = '建议观望'
                 analysis_result['reason'].append(f'当前价格低于成本价{abs(price_change_ratio*100):.2f}%')
-                if latest_price > latest_ma60 and latest_ma5 > latest_ma10:
+                if (latest_price > latest_ma60 and latest_ma5 > latest_ma10 and 
+                    latest_macd > latest_signal and latest_rsi > 30):
                     analysis_result['suggestion'] = '建议加仓'
-                    analysis_result['reason'].append('价格站在60日均线上方，短期均线向好')
+                    analysis_result['reason'].append('价格站在60日均线上方，MACD金叉，RSI回升')
                 else:
                     analysis_result['reason'].append('等待技术面企稳后再考虑加仓')
             
@@ -78,9 +120,9 @@ class CostStrategy:
             elif price_change_ratio >= self.take_profit_threshold:
                 analysis_result['suggestion'] = '建议持有'
                 analysis_result['reason'].append(f'已盈利{price_change_ratio*100:.2f}%')
-                if latest_price < latest_ma5 and latest_ma5 < latest_ma10:
+                if latest_macd < latest_signal and latest_price < latest_ma5:
                     analysis_result['suggestion'] = '建议卖出止盈'
-                    analysis_result['reason'].append('均线呈现下跌趋势')
+                    analysis_result['reason'].append('MACD死叉，短期均线转弱')
                 else:
                     analysis_result['reason'].append('走势仍然强势，可继续持有')
             
@@ -88,9 +130,10 @@ class CostStrategy:
             elif price_change_ratio <= self.stop_loss_threshold:
                 analysis_result['suggestion'] = '建议观望'
                 analysis_result['reason'].append(f'已亏损{abs(price_change_ratio*100):.2f}%')
-                if latest_price < latest_ma20 and latest_ma5 < latest_ma10:
+                if (latest_price < latest_ma20 and latest_rsi < 30 and 
+                    latest_price < latest_lower_band):
                     analysis_result['suggestion'] = '建议止损'
-                    analysis_result['reason'].append('价格跌破20日均线，技术面走弱')
+                    analysis_result['reason'].append('RSI超卖，价格跌破布林带下轨，技术面严重走弱')
                 else:
                     analysis_result['reason'].append('等待反弹机会再考虑操作')
             
