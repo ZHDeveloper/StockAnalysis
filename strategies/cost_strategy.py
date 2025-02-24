@@ -3,6 +3,7 @@ import numpy as np
 import efinance as ef
 from datetime import datetime, timedelta
 from utils.logger import Logger
+from utils.stock_utils import stocks_dict
 
 class CostStrategy:
     def __init__(self):
@@ -157,7 +158,7 @@ class CostStrategy:
         if result is None:
             return "分析失败，无法获取有效数据"
             
-        stock_name = stocks_dict.get(stock_code, '未知')
+        stock_name = stocks_dict.get(result['stock_code'], '未知')
         
         output = f"\n股票代码：{result['stock_code']} ({stock_name})"
         output += f"\n当前价格：{result['current_price']:.2f}"

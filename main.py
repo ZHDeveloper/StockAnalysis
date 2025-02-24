@@ -53,9 +53,7 @@ def check_ma_strategy():
     logger.info("开始执行均线金叉选股程序...")
     
     # 初始化策略
-    strategy = MAStrategy(
-        confirmation_days=2  # 要求金叉前两天均满足条件
-    )
+    strategy = MAStrategy()
     current_date = datetime.datetime.now().strftime('%Y-%m-%d')
         
     # 执行选股策略
@@ -90,45 +88,52 @@ def analyze_stock_cost():
     logger = Logger()
     logger.info("开始执行成本分析...")
     
-    # 获取命令行参数
-    global cost_args
+    # 定义股票配置数组
+    stocks_config = [
+        {"code": "600004", "cost": 9.6, "notify_dingtalk": True},
+        {"code": "002384", "cost": 34.31, "notify_dingtalk": False},
+        {"code": "601868", "cost": 2.31, "notify_dingtalk": False},
+        {"code": "002461", "cost": 9.25, "notify_dingtalk": False},
+        {"code": "000860", "cost": 17.65, "notify_dingtalk": False},
+        {"code": "600710", "cost": 10.50, "notify_dingtalk": False},
+        {"code": "000949", "cost": 4.50, "notify_dingtalk": False},
+    ]
     
     # 初始化策略
     strategy = CostStrategy()
     
-    # 分析股票
-    result = strategy.analyze_stock(cost_args.code, cost_args.cost)    
-    
-    # 输出分析结果
-    if result:
-        formatted_result = strategy.format_analysis_result(result)
-        logger.info(formatted_result)
+    # 分析每只股票
+    for stock in stocks_config:
+        logger.info(f"分析股票 {stock['code']} 的成本情况...")
+        result = strategy.analyze_stock(stock['code'], stock['cost'])
         
-        # 发送钉钉消息
-        dingtalk_message = f"股票分析结果\n{formatted_result}"
-        if DingTalkBot().send_text_message(dingtalk_message):
-            logger.info("分析结果已发送到钉钉群")
+        # 输出分析结果
+        if result:
+            formatted_result = strategy.format_analysis_result(result)
+            logger.info(formatted_result)
+            
+            # 根据配置决定是否发送钉钉消息
+            if stock['notify_dingtalk']:
+                dingtalk_message = f"股票分析结果\n{formatted_result}"
+                if DingTalkBot().send_text_message(dingtalk_message):
+                    logger.info(f"股票 {stock['code']} 的分析结果已发送到钉钉群")
+                else:
+                    logger.error(f"股票 {stock['code']} 的钉钉消息发送失败")
         else:
-            logger.error("发送钉钉消息失败")
-    else:
-        error_message = "分析失败，请检查股票代码是否正确"
-        logger.error(error_message)
-        DingTalkBot().send_dingtalk_message(f"股票分析失败\n{error_message}")
+            error_message = f"股票 {stock['code']} 分析失败，请检查股票代码是否正确"
+            logger.error(error_message)
+            if stock['notify_dingtalk']:
+                DingTalkBot().send_dingtalk_message(f"股票分析失败\n{error_message}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='股票分析工具')
     parser.add_argument('--strategy', choices=['ma', 'double_ma', 'cost'], default='double_ma', 
                         help='选择策略：ma(均线金叉)、double_ma(双均线多头排列)或cost(成本分析)')
-    args, remaining_args = parser.parse_known_args()
+    args = parser.parse_args()
     
     if args.strategy == 'ma':
         check_ma_strategy()
     elif args.strategy == 'cost':
-        # 使用剩余参数重新解析成本分析所需的参数
-        cost_parser = argparse.ArgumentParser(description='股票成本分析')
-        cost_parser.add_argument('--code', required=True, help='股票代码')
-        cost_parser.add_argument('--cost', type=float, required=True, help='成本价格')
-        cost_args = cost_parser.parse_args(remaining_args)
         analyze_stock_cost()
     else:
         check_double_ma_strategy()
