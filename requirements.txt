@@ -1,6 +1,2 @@
-baostock>=0.7.5
 pandas>=1.3.0
-efinance>=0.5.3
-yfinance>=0.2.54
-jqdatasdk>=2.2.3
 akshare
