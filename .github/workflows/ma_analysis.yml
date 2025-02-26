@@ -2,8 +2,7 @@ name: MA Strategy Analysis
 
 on:
   schedule:
-    # 每个交易日（周一至周五）下午3点运行
-    - cron: '0 7 * * 1-5'  # UTC时间7:00，对应北京时间15:00
+    - cron: '0 7 * * *' 
   workflow_dispatch:  # 允许手动触发
 
 jobs:
