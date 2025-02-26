@@ -2,7 +2,7 @@ name: Double MA Analysis
 
 on:
   schedule:
-    - cron: '0 1 * * 1-5'  # UTC时间1:00（北京时间9:00），仅在工作日运行
+    - cron: '0 1 * * *' 
   workflow_dispatch:  # 允许手动触发
 
 jobs:
