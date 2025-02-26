@@ -2,7 +2,7 @@ name: Cost Analysis
 
 on:
   schedule:
-    - cron: '0 2,4 * * *'
+    - cron: '0 1-9 * * *'
   workflow_dispatch:  # 添加手动触发支持
 
 jobs:
