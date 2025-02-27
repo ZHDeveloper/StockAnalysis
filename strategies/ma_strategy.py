@@ -46,6 +46,14 @@ class MAStrategy:
             df['RSI'] = self.calculate_rsi(df, self.rsi_period)
         return df
 
+    def calculate_macd(self, df, short_period=12, long_period=26, signal_period=9):
+        """计算MACD指标"""
+        df['EMA12'] = df['close'].ewm(span=short_period, adjust=False).mean()
+        df['EMA26'] = df['close'].ewm(span=long_period, adjust=False).mean()
+        df['MACD'] = df['EMA12'] - df['EMA26']
+        df['Signal'] = df['MACD'].ewm(span=signal_period, adjust=False).mean()
+        return df
+
     def check_stock(self, stock_code):
         """分析单只股票"""
         try:
@@ -71,6 +79,15 @@ class MAStrategy:
             # 获取最近confirmation_days+1天数据
             recent_data = df.tail(self.confirmation_days + 1)
             
+            # 计算MACD指标
+            df = self.calculate_macd(df)
+            
+            # 增加止损机制
+            stop_loss = recent_data['close'].iloc[-1] * 0.95  # 设定止损点为当前价格的95%
+            
+            # 增加趋势确认机制
+            trend_confirmation = (recent_data['close'].iloc[-3:] > recent_data[f'MA{self.short_period}'].iloc[-3:]).all()
+            
             # 策略条件
             # 1. 短期均线上穿长期均线（金叉确认）
             golden_cross = (recent_data[f'MA{self.short_period}'].iloc[:-1] <= recent_data[f'MA{self.long_period}'].iloc[:-1]).all() and \
@@ -88,7 +105,7 @@ class MAStrategy:
             if self.use_rsi:
                 rsi_condition = recent_data['RSI'].iloc[-1] < self.rsi_threshold  # 避免超买
             
-            return golden_cross and volume_increase and price_above_ma and rsi_condition
+            return golden_cross and volume_increase and price_above_ma and rsi_condition and trend_confirmation and recent_data['close'].iloc[-1] > stop_loss
 
         except Exception as e:
             print(f"分析股票 {stock_code} 时出错: {str(e)}")
