@@ -35,16 +35,17 @@ jobs:
           echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
           echo "timestamp=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get Latest Release
+        id: get_release
+        uses: actions/github-script@v6
         with:
-          tag_name: v${{ steps.datetime.outputs.timestamp }}
-          release_name: Stock Analysis Report ${{ steps.datetime.outputs.date }}
-          draft: false
-          prerelease: false
+          script: |
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: 'AnalysisResults'
+            });
+            core.setOutput('upload_url', release.data.upload_url);
 
       - name: Upload logs
         if: hashFiles('./logs/stock_analysis.log') != ''
@@ -52,7 +53,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
           asset_path: ./logs/stock_analysis.log
           asset_name: stock_analysis_${{ steps.datetime.outputs.timestamp }}.log
           asset_content_type: text/plain
@@ -63,7 +64,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
           asset_path: ./stocks/double_ma_stocks.txt
           asset_name: double_ma_stocks_${{ steps.datetime.outputs.timestamp }}.txt
           asset_content_type: text/plain
