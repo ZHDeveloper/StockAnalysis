@@ -26,9 +26,3 @@ jobs:
       - name: Run cost analysis
         run: python main.py --strategy cost
         
-      - name: Commit and push if changed
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          git add .
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update cost analysis results" && git push)
