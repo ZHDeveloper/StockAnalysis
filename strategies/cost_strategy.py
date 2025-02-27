@@ -6,169 +6,250 @@ from utils.logger import Logger
 from utils.stock_utils import stocks_dict
 
 class CostStrategy:
-    def __init__(self):
+    def __init__(self, config=None):
         self.logger = Logger()
-        # 定义技术指标参数
-        self.ma_periods = [5, 10, 20, 60]
-        self.add_position_threshold = -0.05
-        self.take_profit_threshold = 0.1
-        self.stop_loss_threshold = -0.1
         
-        # 新增技术指标参数
-        self.macd_params = {
-            'fast': 12,
-            'slow': 26,
-            'signal': 9
+        # 参数默认配置
+        self.default_config = {
+            'ma_periods': [5, 10, 20, 60],
+            'macd_params': {'fast': 12, 'slow': 26, 'signal': 9},
+            'rsi_period': 14,
+            'bollinger_params': {'period': 20, 'std': 2},
+            'atr_period': 14,
+            'volume_multiplier': 1.2,
+            'risk_ratio': 2.0,
+            'max_position_ratio': 0.2
         }
-        self.rsi_period = 14
-        self.bollinger_period = 20
-        self.bollinger_std = 2
+        
+        # 合并自定义配置
+        self.config = {**self.default_config, **(config or {})}
 
-    def calculate_ma(self, data):
-        """计算多个周期的均线"""
-        ma_dict = {}
-        for period in self.ma_periods:
-            ma_dict[f'MA{period}'] = data['close'].rolling(window=period).mean()
-        return ma_dict
+        # 风险控制模块
+        self.position_size = {}
+        self.total_portfolio_value = 1_000_000  # 示例初始组合规模
 
-    def calculate_macd(self, data):
-        """计算MACD指标"""
-        exp1 = data['close'].ewm(span=self.macd_params['fast']).mean()
-        exp2 = data['close'].ewm(span=self.macd_params['slow']).mean()
-        macd = exp1 - exp2
-        signal = macd.ewm(span=self.macd_params['signal']).mean()
-        return macd, signal
+    # %% 增强技术指标计算方法
+    def calculate_enhanced_indicators(self, df):
+        """计算改进后的全套技术指标"""
+        # 基本价格信息
+        df['price_change'] = df['close'].pct_change()
+        
+        # 均线系统
+        for period in self.config['ma_periods']:
+            df[f'MA{period}'] = df['close'].rolling(period).mean()
+        
+        # MACD指标
+        macd_params = self.config['macd_params']
+        exp1 = df['close'].ewm(span=macd_params['fast']).mean()
+        exp2 = df['close'].ewm(span=macd_params['slow']).mean()
+        df['MACD'] = exp1 - exp2
+        df['MACD_Signal'] = df['MACD'].ewm(span=macd_params['signal']).mean()
+        
+        # RSI指标
+        delta = df['close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(self.config['rsi_period']).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(self.config['rsi_period']).mean()
+        df['RSI'] = 100 - (100 / (1 + (gain / loss)))
+        
+        # 布林带
+        bb = self.config['bollinger_params']
+        df['BB_Middle'] = df['close'].rolling(bb['period']).mean()
+        std = df['close'].rolling(bb['period']).std()
+        df['BB_Upper'] = df['BB_Middle'] + std * bb['std']
+        df['BB_Lower'] = df['BB_Middle'] - std * bb['std']
+        
+        # ATR波动率
+        high = df['high']
+        low = df['low']
+        close = df['close']
+        tr1 = high - low
+        tr2 = (high - close.shift(1)).abs()
+        tr3 = (low - close.shift(1)).abs()
+        tr = pd.DataFrame({'tr1': tr1, 'tr2': tr2, 'tr3': tr3}).max(axis=1)
+        df['ATR'] = tr.rolling(self.config['atr_period']).mean()
+        
+        # 成交量验证指标
+        df['Volume_MA5'] = df['volume'].rolling(5).mean()
+        return df.dropna()
 
-    def calculate_rsi(self, data):
-        """计算RSI指标"""
-        delta = data['close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=self.rsi_period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=self.rsi_period).mean()
-        rs = gain / loss
-        return 100 - (100 / (1 + rs))
+    # %% 信号检测方法
+    def check_crossovers(self, df):
+        """检测技术指标交叉信号"""
+        signals = {}
+        
+        # MACD交叉检测
+        latest = len(df) - 1
+        if (df['MACD'].iloc[latest] > df['MACD_Signal'].iloc[latest] and
+            df['MACD'].iloc[latest-1] <= df['MACD_Signal'].iloc[latest-1]):
+            signals['MACD_Golden'] = True
+        if (df['MACD'].iloc[latest] < df['MACD_Signal'].iloc[latest] and
+            df['MACD'].iloc[latest-1] >= df['MACD_Signal'].iloc[latest-1]):
+            signals['MACD_Death'] = True
+            
+        # 价格与均线关系
+        signals['Price_Above_MA20'] = df['close'].iloc[-1] > df['MA20'].iloc[-1]
+        signals['MA5_Above_MA10'] = df['MA5'].iloc[-1] > df['MA10'].iloc[-1]
+        
+        return signals
 
-    def calculate_bollinger_bands(self, data):
-        """计算布林带"""
-        middle = data['close'].rolling(window=self.bollinger_period).mean()
-        std = data['close'].rolling(window=self.bollinger_period).std()
-        upper = middle + (std * self.bollinger_std)
-        lower = middle - (std * self.bollinger_std)
-        return upper, middle, lower
+    def check_volume_breakout(self, df):
+        """检测成交量突破"""
+        latest_vol = df['volume'].iloc[-1]
+        vol_ma = df['Volume_MA5'].iloc[-1]
+        return latest_vol > vol_ma * self.config['volume_multiplier']
 
+    # %% 风险管理模块
+    def calculate_position_size(self, stock_code, atr, price):
+        """基于凯利公式和波动率计算仓位"""
+        if stock_code not in self.position_size:
+            # 计算波动率调整系数
+            vol_adj = atr / price
+            # 最大仓位限制
+            max_capital = self.total_portfolio_value * self.config['max_position_ratio']
+            # 凯利公式计算理论仓位（简化版）
+            kelly_fraction = 0.2 / vol_adj if vol_adj > 0 else 0
+            position_size = min(kelly_fraction * self.total_portfolio_value, max_capital)
+            self.position_size[stock_code] = position_size
+        return self.position_size[stock_code]
+
+    def update_portfolio_value(self, new_value):
+        """更新组合总市值"""
+        self.total_portfolio_value = new_value
+
+    # %% 核心分析方法
     def analyze_stock(self, stock_code, cost_price):
-        """分析单只股票"""
         try:
-            # 获取3年的历史数据
+            # 获取历史数据
             end_date = datetime.now().strftime('%Y%m%d')
             start_date = (datetime.now() - timedelta(days=3*365)).strftime('%Y%m%d')
-            
-            # 使用akshare获取历史数据
-            df = ak.stock_zh_a_hist(symbol=stock_code, start_date=start_date, end_date=end_date, adjust="qfq")
-            if df is None or df.empty:
-                self.logger.error(f"无法获取股票 {stock_code} 的历史数据")
+            df = ak.stock_zh_a_hist(
+                symbol=stock_code, 
+                start_date=start_date, 
+                end_date=end_date, 
+                adjust="qfq"
+            )
+            if df.empty:
                 return None
             
             # 数据预处理
-            df['date'] = pd.to_datetime(df['日期'])
-            df['close'] = df['收盘'].astype(float)
-            df['volume'] = df['成交量'].astype(float)
+            df = df.rename(columns={
+                '日期': 'date',
+                '开盘': 'open',
+                '最高': 'high',
+                '最低': 'low',
+                '收盘': 'close',
+                '成交量': 'volume'
+            })
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.sort_values('date').reset_index(drop=True)
             
             # 计算技术指标
-            ma_dict = self.calculate_ma(df)
-            for ma_name, ma_values in ma_dict.items():
-                df[ma_name] = ma_values
-            
-            macd, signal = self.calculate_macd(df)
-            rsi = self.calculate_rsi(df)
-            upper_band, middle_band, lower_band = self.calculate_bollinger_bands(df)
+            df = self.calculate_enhanced_indicators(df)
+            if df.empty:
+                return None
             
             # 获取最新数据
-            latest_price = df['close'].iloc[-1]
-            latest_ma5 = df['MA5'].iloc[-1]
-            latest_ma10 = df['MA10'].iloc[-1]
-            latest_ma20 = df['MA20'].iloc[-1]
-            latest_ma60 = df['MA60'].iloc[-1]
-            latest_macd = macd.iloc[-1]
-            latest_signal = signal.iloc[-1]
-            latest_rsi = rsi.iloc[-1]
-            latest_lower_band = lower_band.iloc[-1]
+            latest = df.iloc[-1]
+            price_change_ratio = (latest['close'] - cost_price) / cost_price
+            dynamic_thresholds = self.calculate_dynamic_thresholds(latest['ATR'], cost_price)
             
-            # 计算相对成本价的涨跌幅
-            price_change_ratio = (latest_price - cost_price) / cost_price
-            
-            # 分析建议
-            analysis_result = {
+            # 生成基础分析结果
+            analysis = {
                 'stock_code': stock_code,
-                'current_price': latest_price,
+                'current_price': latest['close'],
                 'cost_price': cost_price,
-                'price_change_ratio': price_change_ratio,
-                'suggestion': '',
-                'reason': []
+                'price_change': price_change_ratio,
+                'suggestion': '持有',
+                'reasons': [],
+                'position_size': self.calculate_position_size(stock_code, latest['ATR'], latest['close'])
             }
             
-            # 判断加仓条件
-            if price_change_ratio <= self.add_position_threshold:
-                analysis_result['suggestion'] = '建议观望'
-                analysis_result['reason'].append(f'当前价格低于成本价{abs(price_change_ratio*100):.2f}%')
-                if (latest_price > latest_ma60 and latest_ma5 > latest_ma10 and 
-                    latest_macd > latest_signal and latest_rsi > 30):
-                    analysis_result['suggestion'] = '建议加仓'
-                    analysis_result['reason'].append('价格站在60日均线上方，MACD金叉，RSI回升')
-                else:
-                    analysis_result['reason'].append('等待技术面企稳后再考虑加仓')
+            # 信号检测
+            signals = self.check_crossovers(df)
+            volume_breakout = self.check_volume_breakout(df)
             
-            # 判断卖出条件
-            elif price_change_ratio >= self.take_profit_threshold:
-                analysis_result['suggestion'] = '建议持有'
-                analysis_result['reason'].append(f'已盈利{price_change_ratio*100:.2f}%')
-                if latest_macd < latest_signal and latest_price < latest_ma5:
-                    analysis_result['suggestion'] = '建议卖出止盈'
-                    analysis_result['reason'].append('MACD死叉，短期均线转弱')
-                else:
-                    analysis_result['reason'].append('走势仍然强势，可继续持有')
-            
-            # 判断止损条件
-            elif price_change_ratio <= self.stop_loss_threshold:
-                analysis_result['suggestion'] = '建议观望'
-                analysis_result['reason'].append(f'已亏损{abs(price_change_ratio*100):.2f}%')
-                if (latest_price < latest_ma20 and latest_rsi < 30 and 
-                    latest_price < latest_lower_band):
-                    analysis_result['suggestion'] = '建议止损'
-                    analysis_result['reason'].append('RSI超卖，价格跌破布林带下轨，技术面严重走弱')
-                else:
-                    analysis_result['reason'].append('等待反弹机会再考虑操作')
-            
-            # 其他情况
+            # %% 动态决策逻辑
+            # 亏损场景
+            if price_change_ratio <= dynamic_thresholds['add_position']:
+                analysis['suggestion'] = '观望'
+                analysis['reasons'].append(f'当前亏损 ({price_change_ratio*100:.1f}%) 达到动态阈值')
+                
+                if all([
+                    signals.get('MACD_Golden', False),
+                    signals['Price_Above_MA20'],
+                    volume_breakout,
+                    latest['RSI'] > 35
+                ]):
+                    analysis['suggestion'] = '加仓'
+                    analysis['reasons'].append('MACD金叉+站上20日线+量能配合')
+
+            # 止盈场景
+            elif price_change_ratio >= dynamic_thresholds['take_profit']:
+                analysis['reasons'].append(f'当前盈利 ({price_change_ratio*100:.1f}%) 达到动态目标')
+                
+                if any([
+                    signals.get('MACD_Death', False),
+                    latest['close'] < latest['MA5'],
+                    latest['RSI'] > 70
+                ]):
+                    analysis['suggestion'] = '止盈'
+                    analysis['reasons'].append('出现技术性卖出信号')
+                    
+            # 止损场景
+            elif price_change_ratio <= dynamic_thresholds['stop_loss']:
+                analysis['suggestion'] = '止损'
+                analysis['reasons'] = [
+                    f'当前亏损 ({price_change_ratio*100:.1f}%) 超过动态止损线',
+                    '价格跌破布林带下轨' if latest['close'] < latest['BB_Lower'] else ''
+                ]
+                
+            # 正常波动场景
             else:
-                analysis_result['suggestion'] = '建议观望'
-                analysis_result['reason'].append('当前价格波动在合理范围内')
-                if latest_price > latest_ma20:
-                    analysis_result['reason'].append('价格运行在20日均线上方，走势较强')
+                if signals['Price_Above_MA20'] and signals['MA5_Above_MA10']:
+                    analysis['reasons'].append('多头排列延续')
                 else:
-                    analysis_result['reason'].append('价格运行在20日均线下方，需要等待企稳')
+                    analysis['reasons'].append('区间震荡行情')
             
-            return analysis_result
+            return analysis
             
         except Exception as e:
-            self.logger.error(f"分析股票 {stock_code} 时发生错误：{str(e)}")
+            self.logger.error(f"分析 {stock_code} 时出错: {str(e)}")
             return None
-    
-    def format_analysis_result(self, result):
+
+    # %% 实用工具方法
+    def calculate_dynamic_thresholds(self, atr_value, cost_price):
+        """计算动态阈值"""
+        return {
+            'take_profit': self.config['risk_ratio'] * (atr_value / cost_price),
+            'stop_loss': -self.config['risk_ratio'] * (atr_value / cost_price),
+            'add_position': -0.8 * self.config['risk_ratio'] * (atr_value / cost_price)
+        }
+
+    def format_analysis_result(self, analysis):
         """格式化分析结果"""
-        if result is None:
-            return "分析失败，无法获取有效数据"
-            
-        stock_name = stocks_dict.get(result['stock_code'], '未知')
-        
-        output = f"\n股票代码：{result['stock_code']} ({stock_name})"
-        output += f"\n当前价格：{result['current_price']:.2f}"
-        output += f"\n成本价格：{result['cost_price']:.2f}"
-        output += f"\n涨跌幅：{result['price_change_ratio']*100:.2f}%"
-        output += f"\n投资建议：{result['suggestion']}"
-        output += "\n建议理由："
-        for reason in result['reason']:
-            output += f"\n - {reason}"
+        if not analysis:
+            return "分析结果不可用"
 
-        output += f"\n\n"
+        stock_name = stocks_dict.get(analysis['stock_code'], '未知股票')
+        output = [
+            f"\n股票分析报告：{analysis['stock_code']} ({stock_name})",
+            f"当前价格：{analysis['current_price']:.2f}",
+            f"成本价格：{analysis['cost_price']:.2f}",
+            f"盈亏比例：{analysis['price_change']*100:+.1f}%",
+            f"建议操作：{analysis['suggestion']}",
+            "主要依据：",
+        ]
+        output.extend([f" • {r}" for r in analysis['reasons'] if r])
+        output.append(f"建议仓位：{analysis['position_size']:,.0f} 元")
+        return "\n".join(output)
 
-        return output
+# %% 使用示例
+if __name__ == "__main__":
+    strategy = CostStrategy(config={'max_position_ratio': 0.15})
+    
+    # 示例股票分析
+    sample_analysis = strategy.analyze_stock('600519', 1800)  # 以茅台为例假设成本价1800
+    if sample_analysis:
+        print(strategy.format_analysis_result(sample_analysis))
+    else:
+        print("分析失败")
