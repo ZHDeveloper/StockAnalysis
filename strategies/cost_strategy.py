@@ -172,7 +172,7 @@ class CostStrategy:
             # 亏损场景
             if price_change_ratio <= dynamic_thresholds['add_position']:
                 analysis['suggestion'] = '观望'
-                analysis['reasons'].append(f'当前亏损 ({price_change_ratio*100:.1f}%) 达到动态阈值')
+                analysis['reasons'].append(f'【价格】亏损幅度 {price_change_ratio*100:.1f}% 已达到预警线')
                 
                 if all([
                     signals.get('MACD_Golden', False),
@@ -181,11 +181,16 @@ class CostStrategy:
                     latest['RSI'] > 35
                 ]):
                     analysis['suggestion'] = '加仓'
-                    analysis['reasons'].append('MACD金叉+站上20日线+量能配合')
+                    analysis['reasons'] = [
+                        f'【价格】虽然亏损 {price_change_ratio*100:.1f}%，但技术面转好',
+                        '【技术】MACD金叉（短期动能转强）',
+                        '【趋势】股价站上20日均线（中期趋势向好）',
+                        '【成交】成交量明显放大（市场认可度提升）'
+                    ]
 
             # 止盈场景
             elif price_change_ratio >= dynamic_thresholds['take_profit']:
-                analysis['reasons'].append(f'当前盈利 ({price_change_ratio*100:.1f}%) 达到动态目标')
+                analysis['reasons'].append(f'【盈利】当前盈利 {price_change_ratio*100:.1f}% 已达到目标')
                 
                 if any([
                     signals.get('MACD_Death', False),
@@ -193,22 +198,29 @@ class CostStrategy:
                     latest['RSI'] > 70
                 ]):
                     analysis['suggestion'] = '止盈'
-                    analysis['reasons'].append('出现技术性卖出信号')
+                    analysis['reasons'] = [
+                        f'【盈利】已获利 {price_change_ratio*100:.1f}%，达到目标',
+                        '【风险】' + (
+                            'MACD死叉（动能减弱）' if signals.get('MACD_Death', False) else 
+                            '股价跌破5日均线（短期走弱）' if latest['close'] < latest['MA5'] else 
+                            'RSI超买（技术指标过热）'
+                        )
+                    ]
                     
             # 止损场景
             elif price_change_ratio <= dynamic_thresholds['stop_loss']:
                 analysis['suggestion'] = '止损'
                 analysis['reasons'] = [
-                    f'当前亏损 ({price_change_ratio*100:.1f}%) 超过动态止损线',
-                    '价格跌破布林带下轨' if latest['close'] < latest['BB_Lower'] else ''
+                    f'【风险】亏损幅度 {price_change_ratio*100:.1f}% 已超过止损线',
+                    '【技术】价格跌破布林带下轨（超卖但下跌趋势强）' if latest['close'] < latest['BB_Lower'] else '【建议】控制风险，及时止损'
                 ]
                 
             # 正常波动场景
             else:
                 if signals['Price_Above_MA20'] and signals['MA5_Above_MA10']:
-                    analysis['reasons'].append('多头排列延续')
+                    analysis['reasons'].append('【趋势】均线多头排列，短中期走势良好')
                 else:
-                    analysis['reasons'].append('区间震荡行情')
+                    analysis['reasons'].append('【行情】价格处于正常波动区间，暂无明确信号')
             
             return analysis
             
@@ -232,7 +244,7 @@ class CostStrategy:
 
         stock_name = stocks_dict.get(analysis['stock_code'], '未知股票')
         output = [
-            f"\n股票分析报告：{analysis['stock_code']} ({stock_name})",
+            f"\n股票代码：{analysis['stock_code']} ({stock_name})",
             f"当前价格：{analysis['current_price']:.2f}",
             f"成本价格：{analysis['cost_price']:.2f}",
             f"盈亏比例：{analysis['price_change']*100:+.1f}%",
@@ -240,7 +252,6 @@ class CostStrategy:
             "主要依据：",
         ]
         output.extend([f" • {r}" for r in analysis['reasons'] if r])
-        output.append(f"建议仓位：{analysis['position_size']:,.0f} 元")
         return "\n".join(output)
 
 # %% 使用示例
