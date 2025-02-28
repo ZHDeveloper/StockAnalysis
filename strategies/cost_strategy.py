@@ -11,14 +11,14 @@ class CostStrategy:
         
         # 参数默认配置
         self.default_config = {
-            'ma_periods': [5, 10, 20, 60],
-            'macd_params': {'fast': 12, 'slow': 26, 'signal': 9},
-            'rsi_period': 14,
-            'bollinger_params': {'period': 20, 'std': 2},
-            'atr_period': 14,
-            'volume_multiplier': 1.2,
-            'risk_ratio': 2.0,
-            'max_position_ratio': 0.2
+            'ma_periods': [5, 10, 20, 60],  # 均线周期列表，分别代表5日、10日、20日和60日均线
+            'macd_params': {'fast': 12, 'slow': 26, 'signal': 9},  # MACD参数：快线、慢线和信号线周期
+            'rsi_period': 14,  # RSI相对强弱指标的计算周期
+            'bollinger_params': {'period': 20, 'std': 2},  # 布林带参数：均线周期和标准差倍数
+            'atr_period': 14,  # ATR平均真实波幅的计算周期
+            'volume_multiplier': 1.2,  # 成交量放大倍数阈值，用于判断成交量突破
+            'risk_ratio': 2.0,  # 风险比率，用于计算止盈止损点
+            'max_position_ratio': 0.2  # 最大仓位比例，控制单只股票的最大持仓比例
         }
         
         # 合并自定义配置
