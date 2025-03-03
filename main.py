@@ -96,6 +96,10 @@ def analyze_stock_cost():
         {"code": "000860", "cost": 17.65, "notify_dingtalk": False},
         {"code": "600710", "cost": 10.50, "notify_dingtalk": False},
         {"code": "000949", "cost": 4.50, "notify_dingtalk": False},
+        # 3.3添加
+        {"code": "601611", "cost": 8.81, "notify_dingtalk": False},
+        {"code": "002145", "cost": 4.69, "notify_dingtalk": False},
+        {"code": "000036", "cost": 4.30, "notify_dingtalk": False},        
     ]
     
     # 初始化策略
