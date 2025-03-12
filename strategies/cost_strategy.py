@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import akshare as ak
+import efinance as ef
 from datetime import datetime, timedelta
 from utils.logger import Logger
 from utils.stock_utils import stocks_dict
@@ -122,11 +122,10 @@ class CostStrategy:
             # 获取历史数据
             end_date = datetime.now().strftime('%Y%m%d')
             start_date = (datetime.now() - timedelta(days=3*365)).strftime('%Y%m%d')
-            df = ak.stock_zh_a_hist(
-                symbol=stock_code, 
-                start_date=start_date, 
-                end_date=end_date, 
-                adjust="qfq"
+            df = ef.stock.get_quote_history(
+                stock_code, 
+                beg=start_date, 
+                end=end_date
             )
             if df.empty:
                 return None

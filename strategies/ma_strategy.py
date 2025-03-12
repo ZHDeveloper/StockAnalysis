@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import akshare as ak
+import efinance as ef
 from datetime import datetime, timedelta
 from utils.logger import Logger
 from tqdm import tqdm
@@ -58,7 +58,9 @@ class MAStrategy:
         """分析单只股票"""
         try:
             # 获取最近60个交易日数据
-            df = ak.stock_zh_a_hist(symbol=stock_code, period="daily", start_date=(datetime.now() - timedelta(days=90)).strftime('%Y%m%d'), end_date=datetime.now().strftime('%Y%m%d'))
+            start_date = (datetime.now() - timedelta(days=90)).strftime('%Y%m%d')
+            end_date = datetime.now().strftime('%Y%m%d')
+            df = ef.stock.get_quote_history(stock_code, beg=start_date, end=end_date)
             if df is None or df.empty or len(df) < max(self.long_period, self.rsi_period if self.use_rsi else 0):
                 return False
 
@@ -117,7 +119,9 @@ class MAStrategy:
         
         for stock_code in tqdm(stock_codes, desc="处理当前批次", leave=False):
             try:
-                df = ak.stock_zh_a_hist(symbol=stock_code, period="daily", start_date=(datetime.now() - timedelta(days=90)).strftime('%Y%m%d'), end_date=datetime.now().strftime('%Y%m%d'))
+                start_date = (datetime.now() - timedelta(days=90)).strftime('%Y%m%d')
+                end_date = datetime.now().strftime('%Y%m%d')
+                df = ef.stock.get_quote_history(stock_code, beg=start_date, end=end_date)
                 if df is None or df.empty or len(df) < max(self.long_period, self.rsi_period if self.use_rsi else 0):
                     continue
 

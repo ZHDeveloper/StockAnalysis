@@ -1,5 +1,5 @@
 import pandas as pd
-import akshare as ak
+import efinance as ef
 from utils.logger import Logger
 from multiprocessing import Pool, cpu_count
 from functools import partial
@@ -31,7 +31,9 @@ class DoubleMaStrategy:
         """处理单个股票数据"""
         try:
             # 获取日线数据
-            day_data = ak.stock_zh_a_hist(symbol=stock_code, period="daily", start_date=(datetime.now() - timedelta(days=365)).strftime('%Y%m%d'), end_date=datetime.now().strftime('%Y%m%d'))
+            start_date = (datetime.now() - timedelta(days=365)).strftime('%Y%m%d')
+            end_date = datetime.now().strftime('%Y%m%d')
+            day_data = ef.stock.get_quote_history(stock_code, beg=start_date, end=end_date)
             if day_data is None or day_data.empty:
                 return False
             
